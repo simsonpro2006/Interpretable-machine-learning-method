@@ -1,0 +1,701 @@
+#ifndef tools_h
+#define tools_h
+
+#include <Windows.h>  // for MS Windows
+#include <GL/glut.h>  // GLUT, include glu.h and gl.h
+#include <fstream>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <map>
+#include <functional>
+#include <algorithm>
+#include <iterator>
+#include <GL/glu.h>
+#include <gl/GL.h>
+#include <thread>
+#include <mutex>
+#include <chrono>
+#include <numeric>
+#include<ctime>
+#include<cstdlib>
+#include <tuple>
+#include <time.h> 
+#include <stdlib.h> 
+#include <unordered_map>
+#include <random>
+#include <set>
+#include <iomanip>
+using namespace std;
+ 
+const int screenWidth = 900; // width of screen window in pixels
+const int screenHeight = 760; // height of screen window in pixels
+
+
+const long double AXIS_X_MIN = -0.5;
+const long double AXIS_X_MAX = 51;// x,y for full dynamic inline
+const long double AXIS_Y_MIN = -0.5;//The actual value for the box is 110%
+const long double AXIS_Y_MAX = 51;//The actual value for the box is 90%
+
+
+std::mutex mtx;
+std::mutex mtx1;
+// Initialize the random_device
+random_device rd;
+
+// Seed the engine
+mt19937_64 generator(5100);
+enum class cancerPlotState
+{
+    partial, full, none, bothMalignentFirst, bothBenignFirst, opposite, single, singleline, removeMalig1, removeBen1, checkingData, Pageblock_234_5,cancer
+};
+enum class pointstate
+{
+    inside, outside
+};
+struct boxAttribute
+{
+    long double x1;
+    long double y1;
+    long double x2;
+    long double y2;
+};
+template <class Container>
+void split2(const std::string& str, Container& cont, char delim = ',')
+{
+    std::stringstream ss(str);
+    std::string token;
+    while (std::getline(ss, token, delim)) {
+        cont.push_back(token);
+    }
+}
+
+
+class CancerVisual
+{
+    static cancerPlotState currentState;
+    static vector<vector<long double>> a1;
+    static vector<vector<long double>> a2;
+    static const int INSIDE = 0; // 0000 
+    static const int LEFT = 1; // 0001 
+    static const int RIGHT = 2; // 0010 
+    static const int BOTTOM = 4; // 0100 
+    static const int TOP = 8; // 1000 
+
+public:
+    static int NumberofThreads;
+    static int sizex;
+    static int sizey;
+    static int maxX;
+    static int maxY;
+    
+    static long double random_number(int digit)
+    {
+        long double u;
+        
+
+        if (digit == 3)
+        {
+            u = rand() % 1001;
+            u = u / 1000;
+            return u;
+        }
+        else if (digit == 4)
+        {
+            u = rand() % 10001;
+            u = u / 10000;
+            return u;
+        }
+        else if (digit == 5)
+        {
+            u = rand() % 100001;
+            u = u / 100000;
+            return u;
+        }
+
+    }
+    static vector<int> generateUniqueInt(int max, int amount)
+    {
+        
+
+        // Generate a number from 0 to 444 or 239
+        int min = 0;
+        
+
+        // If the amount is greater than the max then this will fail
+        
+
+        
+
+        // Specify the range of numbers to generate, in this case [min, max]
+        uniform_int_distribution<int> dist{ min, max };
+
+        // Create a set to hold the random numbers
+        set<int> results;
+        vector<int> final_result;
+        // Generate the random numbers
+        while (results.size() != amount)
+        {
+            results.insert(dist(generator));
+        }
+
+
+        // Display the results
+        for (auto& n : results)
+        {
+            final_result.push_back(n);
+        }
+        return final_result;
+
+    }
+    static void normalize_array(vector<vector<long double>>& a, long double max, long double min, long double maxrange, long double minrange)
+    {
+        for (int i = 0; i < a.size(); i++)
+        {
+            for (int j = 1; j < a[0].size() - 1; j++)
+            {
+                a[i][j] = (max - min) * ((a[i][j] - minrange) / (maxrange - minrange)) + min;
+            }
+        }
+    }
+
+    static void Print(vector<vector<long double>>& a)
+    {
+        for (int i = 0; i < a.size(); i++)
+        {
+            for (int j = 0; j < a[i].size(); j++)
+            {
+                cout << " x" << j << " : " << a[i][j];
+            }
+            cout << endl;
+        }
+    }
+    static vector<vector<long double>>* getVectora1()
+    {
+        return &a1;
+    }
+    static vector<vector<long double>>* getVectora2()
+    {
+        return &a2;
+    }
+    static void AddVectors(vector<vector<long double>>& a, vector<vector<long double>>& b, vector<vector<long double>>& res)
+    {
+        for (auto& r : { std::cref(a), std::cref(b) })
+        {
+            for (const auto& row : r.get()) res.push_back(row);
+        }
+    }
+    static void equal(vector<vector<long double>> &A1, vector<vector<long double>> &A2)
+    {
+        for (int i = 0; i < A1.size(); i++)
+        {
+            for (int j = 0; j < A1.size(); j++)
+            {
+                if (A1[i] == A2[j])
+                {
+                    cout << "1" << endl;
+                }
+            }
+        }
+    }
+    
+    static void gettingData()
+    {
+        ifstream read("cancer.txt");
+        string line = "";
+        
+        while (getline(read, line))
+        {
+            vector<string> temp;
+
+            split2<vector<string>>(line, temp);
+            if (temp.size() < 11)
+                continue;
+            vector<long double> temp2;
+
+            for (size_t i = 0; i < temp.size(); i++)
+                temp2.push_back(stof(temp[i]));
+            if (temp2[10] == 2)
+            {
+
+                a1.push_back(temp2);
+            }
+            else if (temp2[10] == 4)
+            {
+  
+                a2.push_back(temp2);
+            }
+        }
+
+    }
+    
+    static void Setup()
+    {
+        currentState = cancerPlotState::none;
+    }
+    static void bitcoindataset(vector<vector<long double>>& A1)
+    {
+        
+        for (int i = 0; i < A1.size(); i++)
+        {
+            glBegin(GL_LINE_STRIP);
+            glVertex2f(A1[i][2], A1[i][1]);
+            glVertex2f(A1[i][4] + 1 , A1[i][1]);
+            glEnd();
+            //cout<< "att1: "<<A1[i][1]<<" att2: "<<
+
+
+        }
+    }
+    static void dynamic_inline(vector<vector<long double>>& A1)
+    {
+        for (int i = 0; i < A1.size(); i++)
+        {
+            glBegin(GL_LINE_STRIP);
+            glVertex2f(A1[i][1], A1[i][2]);
+            glVertex2f(A1[i][1] + A1[i][3], A1[i][4]);
+            glVertex2f(A1[i][1] + A1[i][3] + A1[i][5], A1[i][6]);
+            glVertex2f(A1[i][1] + A1[i][3] + A1[i][5] + A1[i][7], A1[i][8]);
+            glVertex2f(A1[i][1] + A1[i][3] + A1[i][5] + A1[i][7] + A1[i][9], A1[i][9]);
+            glEnd();
+
+        }
+    }
+    static void dynamic_inline_withPoint(vector<vector<long double>> A1)
+    {
+        for (int i = 0; i < A1.size(); i++)
+        {
+            glBegin(GL_POINTS);
+            glVertex2f(A1[i][1], A1[i][2]);
+            glVertex2f(A1[i][1] + A1[i][3], A1[i][4]);
+            glVertex2f(A1[i][1] + A1[i][3] + A1[i][5], A1[i][6]);
+            glVertex2f(A1[i][1] + A1[i][3] + A1[i][5] + A1[i][7], A1[i][8]);
+            glVertex2f(A1[i][1] + A1[i][3] + A1[i][5] + A1[i][7] + A1[i][9], A1[i][9]);
+            glEnd();
+
+        }
+    }
+    
+    static void AboveGraphOrderly(vector<vector<long double>>& a1)
+    {
+        for (int i = 0; i < a1.size(); i++)
+        {
+            
+            glBegin(GL_LINE_STRIP);
+            glVertex2f(a1[i][1], a1[i][2]);
+            glVertex2f(a1[i][4] + 10, a1[i][3]);
+            glVertex2f(a1[i][4] + 10, a1[i][5]);
+            glVertex2f(a1[i][7] + 20, a1[i][6]);
+            glVertex2f(a1[i][7] + 20, a1[i][8]);
+            glVertex2f(a1[i][9] + 30, a1[i][9]);
+            glEnd();
+
+
+        }
+    }
+    static void BelowGraphOrderly(vector<vector<long double>>& a1)
+    {
+        for (int i = 0; i < a1.size(); i++)
+        {
+            glBegin(GL_LINE_STRIP);
+            glVertex2f(a1[i][1], 0);
+            glVertex2f(a1[i][1], 0 - a1[i][2]);
+            glVertex2f(a1[i][4] + 10, 0 - a1[i][3]);
+            glVertex2f(a1[i][4] + 10, 0 - a1[i][5]);
+            glVertex2f(a1[i][7] + 20, 0 - a1[i][6]);
+            glVertex2f(a1[i][7] + 20, 0 - a1[i][8]);
+            glVertex2f(a1[i][9] + 30, 0 - a1[i][9]);
+            glVertex2f(a1[i][9] + 30, 0);
+            glEnd();
+
+
+        }
+    }
+    static void Reversegraphing(vector<vector<long double>>& a1)
+    {
+        for (int i = 0; i < a1.size(); i++)
+        {
+            for (int j = 1; j < a1[0].size() - 1; j++)
+            {
+                glBegin(GL_LINE_STRIP);
+                glVertex2f(a1[i][1], 0);
+                glVertex2f(a1[i][1], 0 - a1[i][2]);
+                glVertex2f(10, 0 - a1[i][3]);
+                glVertex2f(a1[i][4] + 10, 0);
+                glVertex2f(a1[i][5] + 20, 0);
+                //glVertex2f(a1[0][4], a1[0][5]+20);
+                glVertex2f(a1[i][5] + 20, 0 - a1[i][6]);
+                glVertex2f(a1[i][7] + 30, 0);
+                glVertex2f(a1[i][7] + 30, 0 - a1[i][8]);
+                glVertex2f(40, 0 - a1[i][9]);
+                glEnd();
+                glBegin(GL_LINES);
+                glVertex2f(10, 0);
+                glVertex2f(10, 0 - a1[i][3]);
+                glEnd();
+
+            }
+        }
+    }
+    static void myKeyboard(unsigned char theKey, int mouseX, int mouseY)
+    {
+        static int timepressed = 0;
+        switch (theKey)
+        {
+        case 'a':
+            currentState = cancerPlotState::partial;
+
+
+            glutPostRedisplay();
+            break;
+        case 'b':
+            currentState = cancerPlotState::full;
+            glutPostRedisplay();
+            break;
+        case 'c':
+            currentState = cancerPlotState::bothMalignentFirst;
+            glutPostRedisplay();
+            break;
+        case 'd':
+            timepressed += 1;
+            currentState = cancerPlotState::bothBenignFirst;
+            glutPostRedisplay();
+            break;
+        case 'e':
+            currentState = cancerPlotState::opposite;
+            glutPostRedisplay();
+            break;
+        case 'f':
+            currentState = cancerPlotState::single;
+            glutPostRedisplay();
+            break;
+        case 'g':
+            currentState = cancerPlotState::singleline;
+            glutPostRedisplay();
+            break;
+        case 'h':
+            currentState = cancerPlotState::removeBen1;
+            glutPostRedisplay();
+            break;
+        case 'i':
+            currentState = cancerPlotState::checkingData;
+            cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++I" << endl;
+            glutPostRedisplay();
+            break;
+        case 'l':
+            currentState = cancerPlotState::Pageblock_234_5;
+            cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++I" << endl;
+            glutPostRedisplay();
+            break;
+        case 'k':
+            currentState = cancerPlotState::removeMalig1;
+            glutPostRedisplay();
+            break;
+        case 'z':
+            exit(-1); //terminate the program
+        default:
+            break;
+        }
+    }
+    static void drawingArrow(long double a, long double b)
+    {
+        glBegin(GL_LINE_STRIP);
+        glVertex2f(a - 0.2, 0.2);
+        glVertex2f(a, 0);
+        glVertex2f(a - 0.2, -0.2);
+        glEnd();
+    }
+    static void drawingBox(long double x1, long double  y1, long double x2, long double y2)
+    {
+        
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glRectf(x1, y1, x2, y2);
+    }
+    static void drawingBox1(long double x1, long double  y1, long double x2, long double y2)
+    {
+        glColor3f(0.0f, 0.0f, 0.0f);
+        glLineWidth(2);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glRectf(x1, y1, x2, y2);
+    }
+    static void checkBoxp1(long double px, long double py, long double b1x, long double b1y, long double b2x, long double b2y, pointstate& p)
+    {
+        if (px >= b1x && px <= b2x && py >= b1y && py <= b2y)
+        {
+            p = pointstate::inside;
+            return;
+        }
+        p = pointstate::outside;
+    }
+    
+    static int computeCode(boxAttribute* tempbox, long double x, long double y)
+    {
+        int code = INSIDE;
+
+        if (x < tempbox->x1) // to the left of rectangle 
+            code |= LEFT;
+        else if (x > tempbox->x2) // to the right of rectangle 
+            code |= RIGHT;
+        if (y < tempbox->y1) // below the rectangle 
+            code |= BOTTOM;
+        else if (y > tempbox->y2) // above the rectangle 
+            code |= TOP;
+
+        return code;
+    }
+    static bool cohenSutherlandClip(boxAttribute* tempbox, long double x1, long double y1,
+        long double x2, long double y2)
+    {
+        // Compute region codes for P1, P2 
+        int code1 = computeCode(tempbox, x1, y1);
+        int code2 = computeCode(tempbox, x2, y2);
+
+        // Initialize line as outside the rectangular window 
+        bool accept = false;
+
+        while (true) {
+            if ((code1 == 0) && (code2 == 0)) {
+                // If both endpoints lie within rectangle 
+                accept = true;
+                break;
+            }
+            else if (code1 & code2) {
+                // If both endpoints are outside rectangle, 
+                // in same region 
+                break;
+            }
+            else {
+                // Some segment of line lies within the 
+                // rectangle 
+                int code_out;
+                double x = 0.0;
+                double y = 0.0;
+
+                // At least one endpoint is outside the 
+                // rectangle, pick it. 
+                if (code1 != 0)
+                    code_out = code1;
+                else
+                    code_out = code2;
+
+                // Find intersection point; 
+                // using formulas y = y1 + slope * (x - x1), 
+                // x = x1 + (1 / slope) * (y - y1) 
+                if (code_out & TOP) {
+                    // point is above the clip rectangle 
+                    x = x1 + (x2 - x1) * (tempbox->y2 - y1) / (y2 - y1);
+                    y = tempbox->y2;
+                }
+                else if (code_out & BOTTOM) {
+                    // point is below the rectangle 
+                    x = x1 + (x2 - x1) * (tempbox->y1 - y1) / (y2 - y1);
+                    y = tempbox->y1;
+                }
+                else if (code_out & RIGHT) {
+                    // point is to the right of rectangle 
+                    y = y1 + (y2 - y1) * (tempbox->x2 - x1) / (x2 - x1);
+                    x = tempbox->x2;
+                }
+                else if (code_out & LEFT) {
+                    // point is to the left of rectangle 
+                    y = y1 + (y2 - y1) * (tempbox->x1 - x1) / (x2 - x1);
+                    x = tempbox->x1;
+                }
+
+                // Now intersection point x, y is found 
+                // We replace point outside rectangle 
+                // by intersection point 
+                if (code_out == code1) {
+                    x1 = x;
+                    y1 = y;
+                    code1 = computeCode(tempbox, x1, y1);
+                }
+                else {
+                    x2 = x;
+                    y2 = y;
+                    code2 = computeCode(tempbox, x2, y2);
+                }
+            }
+        }
+
+        return accept;
+    }
+    
+    static void DrawCoordinate()// not normalzie
+    {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glColor3f(0.0, 0.0, 0.0);
+        glLineWidth(4);
+        glBegin(GL_LINE_STRIP);
+
+        glVertex2f(0, 10);
+        glVertex2f(0, 0);
+        glVertex2f(50, 0);
+
+        glEnd();
+
+    }
+    
+    static int Howmanylines(boxAttribute* Tempbox, vector<vector<long double>>& A1)
+    {
+        int howmanylines = 0;
+        for (int i = 0; i < A1.size(); i++)
+        {
+
+            bool pair1 = cohenSutherlandClip(Tempbox, A1[i][1], A1[i][2], A1[i][4] + 10, A1[i][3]);
+            bool pair2 = cohenSutherlandClip(Tempbox, A1[i][4] + 10, A1[i][3], A1[i][4] + 10, A1[i][5]);
+            bool pair3 = cohenSutherlandClip(Tempbox, A1[i][4] + 10, A1[i][5], A1[i][7] + 20, A1[i][6]);
+            bool pair4 = cohenSutherlandClip(Tempbox, A1[i][7] + 20, A1[i][6], A1[i][7] + 20, A1[i][8]);
+            bool pair5 = cohenSutherlandClip(Tempbox, A1[i][7] + 20, A1[i][8], A1[i][9] + 30, A1[i][9]);
+
+            if (pair1 || pair2 || pair3 || pair4 || pair5)
+            {
+                howmanylines += 1;
+            }
+
+        }
+        return howmanylines;
+
+    }
+    static void RemainingLines(boxAttribute* Tempbox, vector<vector<long double>>& A1, vector<vector<long double>>& malignentRemove1)
+    {
+        int counter = 0;
+
+        for (int i = 0; i < A1.size(); i++)
+        {
+            bool pair1 = cohenSutherlandClip(Tempbox, A1[i][1], A1[i][2], A1[i][4] + 10, A1[i][3]);
+            bool pair2 = cohenSutherlandClip(Tempbox, A1[i][4] + 10, A1[i][3], A1[i][4] + 10, A1[i][5]);
+            bool pair3 = cohenSutherlandClip(Tempbox, A1[i][4] + 10, A1[i][5], A1[i][7] + 20, A1[i][6]);
+            bool pair4 = cohenSutherlandClip(Tempbox, A1[i][7] + 20, A1[i][6], A1[i][7] + 20, A1[i][8]);
+            bool pair5 = cohenSutherlandClip(Tempbox, A1[i][7] + 20, A1[i][8], A1[i][9] + 30, A1[i][9]);
+
+            if (pair1 == false && pair2 == false && pair3 == false && pair4 == false && pair5 == false)
+            {
+                vector<long double> v1;
+                v1.push_back(A1[i][0]);
+                v1.push_back(A1[i][1]);
+                v1.push_back(A1[i][2]);
+                v1.push_back(A1[i][3]);
+                v1.push_back(A1[i][4]);
+                v1.push_back(A1[i][5]);
+                v1.push_back(A1[i][6]);
+                v1.push_back(A1[i][7]);
+                v1.push_back(A1[i][8]);
+                v1.push_back(A1[i][9]);
+                v1.push_back(A1[i][10]);
+                malignentRemove1.push_back(v1);
+
+            }
+
+        }
+
+
+    }
+    static void LinesThroughBox(boxAttribute* Tempbox, vector<vector<long double>>& A1, vector<vector<long double>>& malignentRemove1)// This function is for keeping all the lines that going through the box
+    {
+
+        for (int i = 0; i < A1.size(); i++)
+        {
+            bool pair1 = cohenSutherlandClip(Tempbox, A1[i][1], A1[i][2], A1[i][4] + 10, A1[i][3]);
+            bool pair2 = cohenSutherlandClip(Tempbox, A1[i][4] + 10, A1[i][3], A1[i][4] + 10, A1[i][5]);
+            bool pair3 = cohenSutherlandClip(Tempbox, A1[i][4] + 10, A1[i][5], A1[i][7] + 20, A1[i][6]);
+            bool pair4 = cohenSutherlandClip(Tempbox, A1[i][7] + 20, A1[i][6], A1[i][7] + 20, A1[i][8]);
+            bool pair5 = cohenSutherlandClip(Tempbox, A1[i][7] + 20, A1[i][8], A1[i][9] + 30, A1[i][9]);
+
+            if (pair1 || pair2 || pair3 || pair4 || pair5)
+            {
+                vector<long double> v1;
+                v1.push_back(A1[i][0]);
+                v1.push_back(A1[i][1]);
+                v1.push_back(A1[i][2]);
+                v1.push_back(A1[i][3]);
+                v1.push_back(A1[i][4]);
+                v1.push_back(A1[i][5]);
+                v1.push_back(A1[i][6]);
+                v1.push_back(A1[i][7]);
+                v1.push_back(A1[i][8]);
+                v1.push_back(A1[i][9]);
+                v1.push_back(A1[i][10]);
+                malignentRemove1.push_back(v1);
+            }
+
+        }
+
+
+    }
+    
+    static void myDisplay(void)
+    {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        
+
+        if (currentState == cancerPlotState::partial)
+        {
+
+            
+
+        }
+        else if (currentState == cancerPlotState::full)
+        {
+
+
+        }
+        else if (currentState == cancerPlotState::bothMalignentFirst)//c
+        {
+
+        }
+        else if (currentState == cancerPlotState::bothBenignFirst)//d
+        {
+
+
+
+        }
+        else if (currentState == cancerPlotState::checkingData)
+        {
+            
+        }
+        else if (currentState == cancerPlotState::opposite)
+        {
+
+        }
+        else if (currentState == cancerPlotState::single)
+        {
+        
+        }
+        else if (currentState == cancerPlotState::removeBen1)//h
+        {
+            
+        }
+        else if (currentState == cancerPlotState::Pageblock_234_5) //l
+        {
+            
+        }
+        else if (currentState == cancerPlotState::removeMalig1)//k
+
+        {
+        }
+
+
+
+        glFlush(); // send all output to display
+
+    }
+    
+   
+
+};
+int CancerVisual::sizex = 0;
+int CancerVisual::sizey = 0;
+int CancerVisual::maxX = 0;
+int CancerVisual::maxY = 0;
+int CancerVisual::NumberofThreads = 0;
+
+
+cancerPlotState CancerVisual::currentState = cancerPlotState::none;
+vector<vector<long double>> CancerVisual::a1;
+vector<vector<long double>> CancerVisual::a2;
+
+#endif
